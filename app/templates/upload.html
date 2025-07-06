@@ -1,19 +1,144 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Загрузка Excel</title>
+    <title>Карта с метками по группам</title>
+    <meta charset="utf-8"/>
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=c9ae69b0-9e1d-4e3f-a1b6-5763f23a282e&lang=ru_RU"
+            type="text/javascript"></script>
+    <style>
+        /* Занимаем всю высоту окна */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 20px; /* отступы от краёв окна */
+        }
+
+        form {
+            /* Пусть форма занимает только нужное пространство */
+            margin-bottom: 10px;
+            max-width: 600px;
+        }
+
+        #map {
+            flex-grow: 1; /* карта занимает всё оставшееся пространство */
+            min-height: 300px; /* минимальная высота для маленьких экранов */
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Загрузка Excel файла</h1>
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        <input type="file" name="excel_file" accept=".xlsx" required><br><br>
-        <button type="submit">Загрузить</button>
-    </form>
+<h1>Загрузка Excel файла</h1>
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="file" name="excel_file" accept=".xlsx" required><br><br>
+    <button type="submit">Загрузить</button>
+</form>
+{% if filename %}
+    <p>Загружен файл: <strong>{{ filename }}</strong></p>
+{% endif %}
 
-    {% if first_row %}
-        <h2>Первая строка:</h2>
-        <textarea rows="3" cols="80">{{ first_row }}</textarea>
-    {% endif %}
+<div id="map"></div>
+
+{% if addresses %}
+    {{ addresses|json_script:"addr-data" }}
+{% endif %}
+
+<script>
+    ymaps.ready(function () {
+        var myMap = new ymaps.Map("map", {
+            center: [55.796289, 49.108795],
+            zoom: 10
+        });
+
+        {% if addresses %}
+            const addressData = JSON.parse(document.getElementById('addr-data').textContent);
+
+            const colorPresets = [
+                'islands#redIcon',
+                'islands#blueIcon',
+                'islands#greenIcon',
+                'islands#orangeIcon',
+                'islands#violetIcon',
+                'islands#darkBlueIcon',
+                'islands#blackIcon',
+                'islands#yellowIcon',
+                'islands#pinkIcon',
+                'islands#brownIcon',
+                'islands#cyanIcon',
+                'islands#grayIcon',
+                'islands#lightBlueIcon',
+                'islands#lightGreenIcon',
+                'islands#redCircleIcon',
+                'islands#blueCircleIcon',
+                'islands#greenCircleIcon',
+                'islands#orangeCircleIcon',
+                'islands#violetCircleIcon',
+                'islands#yellowCircleIcon',
+            ];
+
+            const groupColors = {};
+            let colorIndex = 0;
+
+            addressData.forEach(item => {
+                const group = item.group;
+                if (!groupColors[group]) {
+                    groupColors[group] = colorPresets[colorIndex % colorPresets.length];
+                    colorIndex++;
+                }
+
+                if (item.house) {
+                    ymaps.geocode(item.street + ', ' + item.house, {results: 1}).then(res => {
+                        const geoObject = res.geoObjects.get(0);
+                        if (geoObject) {
+                            const coords = geoObject.geometry.getCoordinates();
+                            const placemark = new ymaps.Placemark(coords, {
+                                hintContent: `${item.street}, ${item.house}`,
+                                balloonContent: `Группа ${group}: ${item.street}, ${item.house}`
+                            }, {
+                                preset: groupColors[group]
+                            });
+                            myMap.geoObjects.add(placemark);
+                        }
+                    }).catch(err => {
+                        console.error('Ошибка геокодирования адреса:', err);
+                    });
+                } else {
+                    ymaps.geocode("Казань, " + item.street, {kind: 'house', results: 50}).then(res => {
+                        const geoObjects = res.geoObjects;
+                        if (geoObjects.getLength() === 0) {
+                            console.log('Дома не найдены на улице:', item.street);
+                            return;
+                        }
+                        geoObjects.each(geoObject => {
+                            const coords = geoObject.geometry.getCoordinates();
+                            const address = geoObject.getAddressLine();
+
+                            const placemark = new ymaps.Placemark(coords, {
+                                hintContent: address,
+                                balloonContent: `Группа ${group}: ${address}`
+                            }, {
+                                preset: groupColors[group]
+                            });
+                            myMap.geoObjects.add(placemark);
+                        });
+                    }).catch(err => {
+                        console.error('Ошибка геокодирования улицы:', err);
+                    });
+                }
+
+            });
+        {% endif %}
+    });
+</script>
 </body>
 </html>

@@ -1,21 +1,51 @@
-from django.core.files.storage import FileSystemStorage
+import openpyxl
+import re
 from django.shortcuts import render
-from openpyxl import load_workbook
-# Create your views here.
+
+def parse_houses(houses_str):
+    """Разбивает строку домов по запятой и точке с запятой, убирает пробелы."""
+    if not houses_str:
+        return []
+    return [h.strip() for h in re.split('[,;]', houses_str) if h.strip()]
 
 def upload_file(request):
-    first_row = ""
-    if request.method == 'POST' and request.FILES.get('excel_file'):
+    addresses = []
+    filename = None
+
+    if request.method == "POST" and request.FILES.get('excel_file'):
         excel_file = request.FILES['excel_file']
-        fs = FileSystemStorage()
-        filename = fs.save(excel_file.name, excel_file)
-        file_path = fs.path(filename)
+        filename = excel_file.name
+        wb = openpyxl.load_workbook(excel_file)
+        sheet = wb.active
 
-        # читаем первую строку
-        wb = load_workbook(file_path, read_only=True)
-        ws = wb.active
-        first_row = [cell.value for cell in next(ws.iter_rows(min_row=1, max_row=1))]
-        first_row = ', '.join(map(str, first_row))
-        wb.close()
+        # Пропускаем заголовок (первая строка)
+        for row in sheet.iter_rows(min_row=2, values_only=True):
+            group = int(row[0]) if row[0] else None
+            city = row[1].strip() if row[1] else ''
+            street = row[2].strip() if row[2] else ''
+            houses_str = row[3] if row[3] else ''
 
-    return render(request, 'upload.html', {'first_row': first_row})
+            houses = parse_houses(houses_str)
+
+            # Если есть дома, то создаём отдельные записи для каждого дома
+            if houses:
+                for house in houses:
+                    addresses.append({
+                        'group': group,
+                        'city': city,
+                        'street': street,
+                        'house': house
+                    })
+            else:
+                # Если домов нет, передаём улицу без дома (house=None)
+                addresses.append({
+                    'group': group,
+                    'city': city,
+                    'street': street,
+                    'house': None
+                })
+
+    return render(request, 'upload.html', {
+        'addresses': addresses,
+        'filename': filename,
+    })
