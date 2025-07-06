@@ -2,6 +2,9 @@ import openpyxl
 import re
 from django.shortcuts import render
 
+from TatOMS import settings
+
+
 def parse_houses(houses_str):
     """Разбивает строку домов по запятой и точке с запятой, убирает пробелы."""
     if not houses_str:
@@ -48,4 +51,5 @@ def upload_file(request):
     return render(request, 'upload.html', {
         'addresses': addresses,
         'filename': filename,
+        'yandex_api_key': settings.YANDEX_MAPS_API_KEY,
     })
