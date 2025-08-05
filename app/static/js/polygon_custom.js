@@ -1,5 +1,4 @@
 ymaps.ready(['ext.paintOnMap']).then(function () {
-    console.log("b")
         window.map = new ymaps.Map("map", {
         center: [55.796289, 49.108795], // Казань
         zoom: 10,
@@ -52,6 +51,20 @@ ymaps.ready(['ext.paintOnMap']).then(function () {
                 new ymaps.Polygon([coordinates], {}, styles[currentIndex]);
 
             map.geoObjects.add(geoObject);
+
+        //    const show_coords = document.getElementById('html_logs');
+        //    show_coords.innerHTML = coordinates;
+
+            // Создание GeoQueryResult из коллекции геообъектов.
+           var places = ymaps.geoQuery(window.placemarks || []);
+
+          //  var intersect = ymaps.geoQuery(map.geoObjects).searchIntersect(myMap);
+            var result = places.searchIntersect(geoObject);
+
+            const show_coords = document.getElementById('html_logs');
+            result.then(function () {
+                show_coords.innerHTML = result.getLength();
+            });
         }
     });
 }).catch(function (error) {

@@ -2,7 +2,6 @@ import openpyxl
 import re
 from django.shortcuts import render
 from django.contrib import messages
-
 from TatOMS import settings
 
 
@@ -22,46 +21,46 @@ def parse_houses(houses_str):
 
     houses = []
     # Разбиваем по разделителям
-    for part in re.split('[,;]', houses_str):
-        part = part.strip()
-        if not part:
+    for house in re.split('[,;]', houses_str):
+        house = house.strip()
+        if not house:
             continue
 
         # Проверяем, является ли часть диапазоном (содержит тире)
-        if '-' in part:
-            try:
-                start, end = map(str.strip, part.split('-'))
-                if start.isdigit() and end.isdigit():
-                    start_num = int(start)
-                    end_num = int(end)
-                    # Генерируем все числа в диапазоне
-                    houses.extend(str(i) for i in range(min(start_num, end_num),
-                                                        max(start_num, end_num) + 1))
-                else:
-                    # Если не числа, добавляем как есть
-                    houses.append(part)
-            except:
-                # Если что-то пошло не так при разборе диапазона, добавляем как есть
-                houses.append(part)
+        # if '-' in house:
+        #     try:
+        #         start, end = map(str.strip, house.split('-'))
+        #         if start.isdigit() and end.isdigit():
+        #             start_num = int(start)
+        #             end_num = int(end)
+        #             # Генерируем все числа в диапазоне
+        #             houses.extend(str(i) for i in range(min(start_num, end_num),
+        #                                                 max(start_num, end_num) + 1))
+        #         else:
+        #             # Если не числа, добавляем как есть
+        #             houses.append(house)
+        #     except:
+        #         # Если что-то пошло не так при разборе диапазона, добавляем как есть
+        #         houses.append(house)
 
         # Проверяем на наличие /
-        elif '/' in part:
-            main_part, fraction = part.split('/', 1)
-            main_part = main_part.strip()
-            fraction = fraction.strip()
-
-            # Проверяем, что обе части валидны
-            if (re.match(r'^[\dА-Яа-я]+$', main_part) and
-                    re.match(r'^[\dА-Яа-я]+$', fraction)):
-                houses.append(f"{main_part}/{fraction}")
-            else:
-                return ["INVALID"]
-        else:
+        # elif '/' in part:
+        #     main_part, fraction = part.split('/', 1)
+        #     main_part = main_part.strip()
+        #     fraction = fraction.strip()
+        #
+        #     # Проверяем, что обе части валидны
+        #     if (re.match(r'^[\dА-Яа-я]+$', main_part) and
+        #             re.match(r'^[\dА-Яа-я]+$', fraction)):
+        #         houses.append(f"{main_part}/{fraction}")
+        #     else:
+        #         return ["INVALID"]
+        # else:
             # Проверяем, что часть является допустимым номером дома
-            if not re.match(r'^[\dА-Яа-я]+$', part):
-                return ["INVALID"]  # Возвращаем маркер невалидного значения
-            houses.append(part)
+        # if not re.match(r'^[\dА-Яа-я]+$', house):
+        #     return ["INVALID"]  # Возвращаем маркер невалидного значения
 
+        houses.append(house)
     return houses
 
 
